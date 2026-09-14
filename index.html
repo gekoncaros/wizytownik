@@ -15,7 +15,7 @@
   <div class="app-shell">
     <header class="topbar">
       <div class="brand"><span class="brand-mark">W</span><span>Wizytownik</span></div>
-      <button id="installButton" class="icon-button hidden" aria-label="Zainstaluj aplikację">↓</button>
+      <div class="top-actions"><button id="adminButton" class="icon-button" data-action="admin" aria-label="Ustawienia administratora">⚙</button><button id="installButton" class="icon-button hidden" aria-label="Zainstaluj aplikację">↓</button></div>
     </header>
 
     <main>
@@ -35,6 +35,7 @@
 
       <section id="scanView" class="view">
         <div class="view-header"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">NOWY KONTAKT</p><h2>Skanowanie wizytówki</h2></div></div>
+        <div class="scan-mode"><button id="cardModeButton" class="mode-button active" data-mode="card">Wizytówka + OCR</button><button id="qrModeButton" class="mode-button" data-mode="qr">Skanuj QR</button></div>
         <div id="cameraStage" class="camera-stage">
           <video id="cameraVideo" autoplay playsinline muted></video>
           <canvas id="captureCanvas" hidden></canvas>
@@ -60,6 +61,7 @@
         <form id="contactForm" autocomplete="on">
           <label>Imię i nazwisko<input name="name" placeholder="np. Anna Kowalska"></label>
           <label>Firma<input name="company" placeholder="np. Firma Sp. z o.o."></label>
+          <label>Wydarzenie / źródło kontaktu<input name="event" placeholder="np. Targi Warsaw Industry Week"></label>
           <label>Stanowisko<input name="jobTitle" placeholder="np. Dyrektor sprzedaży"></label>
           <div class="two-cols">
             <label>E-mail<input name="email" type="email" placeholder="kontakt@firma.pl"></label>
@@ -71,7 +73,23 @@
           <label>Notatka po rozmowie<textarea name="notes" rows="3" placeholder="O czym rozmawialiście?"></textarea></label>
           <details class="ocr-details"><summary>Tekst odczytany z wizytówki</summary><textarea name="rawText" rows="6"></textarea></details>
           <div class="editor-actions"><button id="deleteButton" class="danger hidden" type="button" data-action="delete-current">Usuń kontakt</button><button class="primary large" type="submit">Zapisz zmiany <span>✓</span></button></div>
+          <button id="thanksButton" class="email-button hidden" type="button" data-action="send-thanks">✉ Wyślij podziękowanie za rozmowę</button></div>
         </form>
+      </section>
+
+
+
+      <section id="adminView" class="view">
+        <div class="view-header"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">ADMINISTRATOR</p><h2>Podziękowania e-mail</h2></div></div>
+        <div class="settings-note">Konfiguracja jest zapisywana na tym urządzeniu. Wysłanie otwiera gotową wiadomość w domyślnej aplikacji pocztowej.</div>
+        <form id="emailSettingsForm">
+          <label>Nazwa nadawcy<input name="senderName" placeholder="np. Anna z Cortiq"></label>
+          <label>Adres do odpowiedzi<input name="replyTo" type="email" placeholder="np. kontakt@firma.pl"></label>
+          <label>Domyślny temat<input name="subject" placeholder="Dziękuję za rozmowę"></label>
+          <label>Szablon wiadomości <span class="field-hint">zmienne: {{name}}, {{company}}, {{event}}, {{sender}}</span><textarea name="template" rows="9"></textarea></label>
+          <button class="primary large" type="submit">Zapisz konfigurację <span>✓</span></button>
+        </form>
+        <div class="settings-note">Automatyczna wysyłka z firmowej skrzynki będzie wymagała bezpiecznej konfiguracji serwera (SMTP/API) po wdrożeniu na Cyberfolks.</div>
       </section>
 
       <section id="libraryView" class="view">
@@ -91,6 +109,7 @@
   </div>
   <div id="toast" class="toast"></div>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
