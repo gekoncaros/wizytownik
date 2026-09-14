@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#183d39">
+  <meta name="description" content="Skanuj wizytówki i zapisuj kontakty szybko podczas eventów.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+  <title>Wizytownik</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">W</span><span>Wizytownik</span></div>
+      <button id="installButton" class="icon-button hidden" aria-label="Zainstaluj aplikację">↓</button>
+    </header>
+
+    <main>
+      <section id="homeView" class="view active">
+        <div class="hero">
+          <p class="eyebrow">EVENT TOOL</p>
+          <h1>Kontakty z wizytówek.<br><em>Bez przepisywania.</em></h1>
+          <p class="lede">Zrób zdjęcie, sprawdź dane i przejdź do kolejnego rozmówcy.</p>
+          <button class="primary large" data-action="start-scan">Skanuj wizytówkę <span>›</span></button>
+        </div>
+        <section class="section">
+          <div class="section-heading"><h2>Ostatnie skany</h2><button class="text-button" data-action="library">Wszystkie</button></div>
+          <div id="recentList" class="contact-list empty-state">Brak zapisanych wizytówek</div>
+        </section>
+        <section class="privacy-note"><span>✓</span> Zdjęcia i dane są przechowywane lokalnie na tym urządzeniu.</section>
+      </section>
+
+      <section id="scanView" class="view">
+        <div class="view-header"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">NOWY KONTAKT</p><h2>Skanowanie wizytówki</h2></div></div>
+        <div id="cameraStage" class="camera-stage">
+          <video id="cameraVideo" autoplay playsinline muted></video>
+          <canvas id="captureCanvas" hidden></canvas>
+          <div class="camera-overlay"><div class="scan-frame"></div><p id="cameraHelp">Ustaw przód wizytówki w ramce</p></div>
+        </div>
+        <div id="cameraFallback" class="camera-fallback hidden">
+          <p>Aparat nie jest jeszcze aktywny.</p>
+          <button class="primary" data-action="camera">Włącz aparat</button>
+          <label class="secondary file-button">Wybierz zdjęcie<input id="imagePicker" type="file" accept="image/*" capture="environment" hidden></label>
+        </div>
+        <div class="scan-actions">
+          <button class="secondary" data-action="flip-camera">↺ Zmień aparat</button>
+          <button id="captureButton" class="capture-button" aria-label="Zrób zdjęcie"><span></span></button>
+          <button class="secondary" data-action="pick-image">Zdjęcie</button>
+        </div>
+        <div id="scanProgress" class="scan-progress hidden"><span class="spinner"></span><span>Odczytywanie wizytówki…</span></div>
+        <div id="scanPreview" class="scan-preview hidden"></div>
+      </section>
+
+      <section id="editorView" class="view">
+        <div class="view-header"><button class="back-button" data-action="discard">‹</button><div><p class="eyebrow">SPRAWDŹ DANE</p><h2 id="editorTitle">Nowy kontakt</h2></div></div>
+        <div id="sideImages" class="side-images"></div>
+        <form id="contactForm" autocomplete="on">
+          <label>Imię i nazwisko<input name="name" placeholder="np. Anna Kowalska"></label>
+          <label>Firma<input name="company" placeholder="np. Firma Sp. z o.o."></label>
+          <label>Stanowisko<input name="jobTitle" placeholder="np. Dyrektor sprzedaży"></label>
+          <div class="two-cols">
+            <label>E-mail<input name="email" type="email" placeholder="kontakt@firma.pl"></label>
+            <label>Telefon<input name="phone" type="tel" placeholder="+48 000 000 000"></label>
+          </div>
+          <label>Strona WWW<input name="website" type="url" placeholder="www.firma.pl"></label>
+          <label>Adres<textarea name="address" rows="2" placeholder="Ulica, kod, miasto"></textarea></label>
+          <label>Tagi <span class="field-hint">oddziel przecinkami</span><input name="tags" placeholder="np. targi, lead, priorytet"></label>
+          <label>Notatka po rozmowie<textarea name="notes" rows="3" placeholder="O czym rozmawialiście?"></textarea></label>
+          <details class="ocr-details"><summary>Tekst odczytany z wizytówki</summary><textarea name="rawText" rows="6"></textarea></details>
+          <button class="primary large" type="submit">Zapisz kontakt <span>✓</span></button>
+        </form>
+      </section>
+
+      <section id="libraryView" class="view">
+        <div class="view-header"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">BAZA KONTAKTÓW</p><h2>Wizytówki</h2></div></div>
+        <div class="search-row"><input id="searchInput" type="search" placeholder="Szukaj osoby, firmy, tagu…"><button id="filterButton" class="icon-button">⌕</button></div>
+        <div class="library-tools"><span id="contactCount">0 kontaktów</span><div><button class="text-button" data-action="export-csv">CSV</button><button class="text-button" data-action="export-json">JSON</button></div></div>
+        <div id="libraryList" class="contact-list empty-state">Tu pojawią się zeskanowane wizytówki.</div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-action="home"><span>⌂</span>Start</button>
+      <button class="nav-scan" data-action="start-scan" aria-label="Skanuj">＋</button>
+      <button class="nav-item" data-action="library"><span>▤</span>Baza</button>
+    </nav>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
