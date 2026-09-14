@@ -231,6 +231,14 @@
       const quote = value => '"' + String(value || '').replace(/"/g, '""') + '"';
       const csv = [keys.join(';')].concat(contacts.map(contact => keys.map(key => quote(contact[key])).join(';'))).join('\n');
       blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }); name = 'wizytownik.csv';
+    } else if (kind === 'vcard') {
+      const escapeVcard = value => String(value || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/;/g, '\\;').replace(/,/g, '\\,');
+      const vcard = contacts.map(contact => {
+        const names = String(contact.name || '').trim().split(/\s+/);
+        const first = names.shift() || '', last = names.join(' ');
+        return ['BEGIN:VCARD','VERSION:3.0','N:' + escapeVcard(last) + ';' + escapeVcard(first) + ';;;','FN:' + escapeVcard(contact.name || contact.company || 'Kontakt'),'ORG:' + escapeVcard(contact.company),'TITLE:' + escapeVcard(contact.jobTitle),'TEL;TYPE=WORK,VOICE:' + escapeVcard(contact.phone),'EMAIL;TYPE=INTERNET:' + escapeVcard(contact.email),'URL:' + escapeVcard(contact.website),'ADR;TYPE=WORK:;;' + escapeVcard(contact.address) + ';;;;','NOTE:' + escapeVcard((contact.notes || '') + (contact.event ? ' | Źródło: ' + contact.event : '') + (contact.tags ? ' | Tagi: ' + contact.tags : '')),'END:VCARD'].join('\r\n');
+      }).join('\r\n');
+      blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' }); name = 'wizytownik-kontakty.vcf';
     } else { blob = new Blob([JSON.stringify(contacts, null, 2)], { type: 'application/json' }); name = 'wizytownik-backup.json'; }
     const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = name; link.click(); URL.revokeObjectURL(link.href);
   }
@@ -252,6 +260,7 @@
   $('btnThanks').addEventListener('click', thankYou);
   $('settingsForm').addEventListener('submit', saveSettings);
   $('search').addEventListener('input', renderCrm);
+  $('btnVcard').addEventListener('click', () => download('vcard'));
   $('btnCsv').addEventListener('click', () => download('csv'));
   $('btnJson').addEventListener('click', () => download('json'));
 
