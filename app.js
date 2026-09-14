@@ -272,7 +272,7 @@ async function exportData(type) {
   if (!all.length) return toast('Brak danych do eksportu.');
   let blob, name;
   if (type === 'csv') {
-    const keys = ['name','company','jobTitle','email','phone','website','address','tags','notes','createdAt'];
+    const keys = ['name','company','event','jobTitle','email','phone','website','address','tags','notes','qrText','createdAt'];
     const rows = [keys.join(';'), ...all.map(c => keys.map(k => k === 'createdAt' ? csvCell(new Date(c[k]).toLocaleString('pl-PL')) : csvCell(c[k])).join(';'))];
     blob = new Blob(['\uFEFF' + rows.join('\n')], {type:'text/csv;charset=utf-8'}); name = 'wizytownik-kontakty.csv';
   } else { blob = new Blob([JSON.stringify(all, null, 2)], {type:'application/json'}); name = 'wizytownik-backup.json'; }
