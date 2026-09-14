@@ -247,10 +247,16 @@ function discardDraft() {
   if (confirm('Odrzucić niezapisany skan?')) { draft = { frontImage:null, backImage:null, rawText:'', qrText:'', id:null }; showView('home'); }
 }
 function openAdmin() {
-  const settings = getEmailSettings();
-  const form = $('#emailSettingsForm');
-  ['senderName','replyTo','subject','template'].forEach(key => form.elements[key].value = settings[key] || '');
   showView('admin');
+  try {
+    const settings = getEmailSettings();
+    const form = $('#emailSettingsForm');
+    if (!form) throw new Error('Brak formularza ustawień');
+    ['senderName','replyTo','subject','template'].forEach(key => form.elements[key].value = settings[key] || '');
+  } catch (error) {
+    console.error('Admin settings error', error);
+    toast('Panel otwarty, ale ustawienia wymagają odświeżenia strony.');
+  }
 }
 function saveEmailSettings(event) {
   event.preventDefault();
@@ -292,6 +298,7 @@ document.addEventListener('click', e => {
 $('#captureButton').addEventListener('click', captureImage);
 $('#imagePicker').addEventListener('change', e => loadFile(e.target.files[0]));
 $('#contactForm').addEventListener('submit', submitContact);
+$('#adminButton').addEventListener('click', event => { event.stopPropagation(); openAdmin(); });
 $('#emailSettingsForm').addEventListener('submit', saveEmailSettings);
 $('[data-mode]').forEach(button => button.addEventListener('click', () => {
   scanMode = button.dataset.mode;
