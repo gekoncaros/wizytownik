@@ -188,6 +188,7 @@ function openEditor(record = {}) {
   stopCamera();
   draft = { ...draft, ...record };
   $('#editorTitle').textContent = record.id ? 'Edytuj kontakt' : 'Sprawdź dane';
+  $('#deleteButton').classList.toggle('hidden', !record.id);
   const form = $('#contactForm');
   ['name','company','jobTitle','email','phone','website','address','tags','notes','rawText'].forEach(k => form.elements[k].value = draft[k] || '');
   $('#sideImages').innerHTML = [draft.frontImage, draft.backImage].filter(Boolean).map((src, i) => `<figure><img src="${src}" alt="Strona ${i+1} wizytówki"><figcaption>${i ? 'Tył' : 'Przód'}</figcaption></figure>`).join('');
@@ -223,7 +224,7 @@ async function deleteCurrent() {
 document.addEventListener('click', e => {
   const action = e.target.closest('[data-action]')?.dataset.action;
   if (!action) return;
-  const actions = { home: () => showView('home'), library: () => showView('library'), 'start-scan': startCamera, camera: startCamera, 'flip-camera': flipCamera, 'pick-image': () => $('#imagePicker').click(), discard: discardDraft, 'export-csv': () => exportData('csv'), 'export-json': () => exportData('json') };
+  const actions = { home: () => showView('home'), library: () => showView('library'), 'start-scan': startCamera, camera: startCamera, 'flip-camera': flipCamera, 'pick-image': () => $('#imagePicker').click(), discard: discardDraft, 'export-csv': () => exportData('csv'), 'export-json': () => exportData('json'), 'delete-current': deleteCurrent };
   actions[action]?.();
 });
 $('#captureButton').addEventListener('click', captureImage);
