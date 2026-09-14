@@ -1,0 +1,11 @@
+{
+  "name": "Wizytownik",
+  "short_name": "Wizytownik",
+  "description": "Skanuj wizytówki i zapisuj kontakty podczas eventów.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f5ef",
+  "theme_color": "#183d39",
+  "lang": "pl",
+  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
