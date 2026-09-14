@@ -40,12 +40,17 @@ function removeRecord(id) {
 
 function showView(id) {
   stopCamera();
-  $$('.view').forEach(v => v.classList.toggle('active', v.id === id + 'View'));
-  $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.action === id));
+  $('.view').forEach(view => {
+    const isActive = view.id === id + 'View';
+    view.classList.toggle('active', isActive);
+    view.style.display = isActive ? 'block' : 'none';
+  });
+  $('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.action === id));
   if (id === 'home') renderHome();
   if (id === 'library') renderLibrary();
-  window.scrollTo({top: 0, behavior: 'smooth'});
+  window.scrollTo({top: 0, behavior: 'auto'});
 }
+window.wizytownikShowView = showView;
 function getEmailSettings() {
   return { senderName: '', replyTo: '', subject: 'Dziękuję za rozmowę', template: 'Dzień dobry {{name}},\n\nDziękuję za rozmowę{{event}}. Miło było poznać {{company}}.\n\nPozdrawiam,\n{{sender}}', ...JSON.parse(localStorage.getItem(EMAIL_SETTINGS_KEY) || '{}') };
 }
