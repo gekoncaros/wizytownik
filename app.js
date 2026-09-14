@@ -315,5 +315,5 @@ $('#filterButton').addEventListener('click', () => $('#searchInput').focus());
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; $('#installButton').classList.remove('hidden'); });
 $('#installButton').addEventListener('click', async () => { if (!deferredInstall) return; deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; $('#installButton').classList.add('hidden'); });
 window.addEventListener('appinstalled', () => toast('Wizytownik zainstalowany'));
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+// Service worker intentionally disabled during mobile testing to avoid stale cached versions.
 openDb().then(renderHome).catch(() => toast('Nie udało się otworzyć lokalnej bazy.'));
