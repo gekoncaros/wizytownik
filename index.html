@@ -27,7 +27,7 @@
           <button class="primary large" data-action="start-scan">Skanuj wizytówkę <span>›</span></button>
         </div>
         <section class="section">
-          <div class="section-heading"><h2>Ostatnie skany</h2><button class="text-button" data-action="library">Wszystkie</button></div>
+          <div class="section-heading"><h2>Ostatnie skany</h2><button class="text-button crm-link" data-action="library">Otwórz CRM →</button></div>
           <div id="recentList" class="contact-list empty-state">Brak zapisanych wizytówek</div>
         </section>
         <section class="privacy-note"><span>✓</span> Zdjęcia i dane są przechowywane lokalnie na tym urządzeniu.</section>
@@ -70,14 +70,15 @@
           <label>Tagi <span class="field-hint">oddziel przecinkami</span><input name="tags" placeholder="np. targi, lead, priorytet"></label>
           <label>Notatka po rozmowie<textarea name="notes" rows="3" placeholder="O czym rozmawialiście?"></textarea></label>
           <details class="ocr-details"><summary>Tekst odczytany z wizytówki</summary><textarea name="rawText" rows="6"></textarea></details>
-          <button class="primary large" type="submit">Zapisz kontakt <span>✓</span></button>
+          <div class="editor-actions"><button id="deleteButton" class="danger hidden" type="button" data-action="delete-current">Usuń kontakt</button><button class="primary large" type="submit">Zapisz zmiany <span>✓</span></button></div>
         </form>
       </section>
 
       <section id="libraryView" class="view">
-        <div class="view-header"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">BAZA KONTAKTÓW</p><h2>Wizytówki</h2></div></div>
+        <div class="view-header"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">BAZA KONTAKTÓW</p><h2>CRM — wizytówki</h2></div></div>
         <div class="search-row"><input id="searchInput" type="search" placeholder="Szukaj osoby, firmy, tagu…"><button id="filterButton" class="icon-button">⌕</button></div>
-        <div class="library-tools"><span id="contactCount">0 kontaktów</span><div><button class="text-button" data-action="export-csv">CSV</button><button class="text-button" data-action="export-json">JSON</button></div></div>
+        <div class="library-tools"><span id="contactCount">0 kontaktów</span><div><button class="text-button" data-action="export-csv">Eksport CSV</button><button class="text-button" data-action="export-json">Backup JSON</button></div></div>
+        <p class="crm-tip">Kliknij kontakt, aby zobaczyć pełne dane i poprawić odczyt OCR.</p>
         <div id="libraryList" class="contact-list empty-state">Tu pojawią się zeskanowane wizytówki.</div>
       </section>
     </main>
@@ -85,7 +86,7 @@
     <nav class="bottom-nav">
       <button class="nav-item active" data-action="home"><span>⌂</span>Start</button>
       <button class="nav-scan" data-action="start-scan" aria-label="Skanuj">＋</button>
-      <button class="nav-item" data-action="library"><span>▤</span>Baza</button>
+      <button class="nav-item" data-action="library"><span>▤</span>CRM</button>
     </nav>
   </div>
   <div id="toast" class="toast"></div>
