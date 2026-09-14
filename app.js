@@ -90,15 +90,35 @@ function bindCards() {
 
 async function startCamera() {
   showView('scan');
+  $('#cameraStage').classList.remove('hidden');
   $('#scanPreview').classList.add('hidden');
   $('#cameraFallback').classList.add('hidden');
+  $('#captureButton').disabled = true;
+  $('#cameraHelp').textContent = 'Uruchamianie aparatu…';
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
-    $('#cameraVideo').srcObject = stream;
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('UNSUPPORTED');
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: facingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    });
+    const video = $('#cameraVideo');
+    video.srcObject = stream;
+    await new Promise((resolve, reject) => {
+      video.onloadedmetadata = resolve;
+      setTimeout(() => reject(new Error('VIDEO_TIMEOUT')), 8000);
+    });
+    await video.play();
+    $('#captureButton').disabled = false;
+    $('#cameraHelp').textContent = draft.frontImage ? 'Ustaw tył wizytówki w ramce' : 'Ustaw przód wizytówki w ramce';
   } catch (e) {
+    console.error('Camera error', e);
     $('#cameraStage').classList.add('hidden');
     $('#cameraFallback').classList.remove('hidden');
-    toast('Nie można uruchomić aparatu — wybierz zdjęcie.');
+    const message = e.name === 'NotAllowedError'
+      ? 'Brak zgody na aparat. W Safari wybierz aA → Ustawienia strony → Aparat → Zezwalaj.'
+      : 'Nie udało się uruchomić podglądu. Użyj przycisku „Wybierz zdjęcie” — otworzy aparat telefonu.';
+    $('#cameraFallback').querySelector('p').textContent = message;
+    toast('Użyj aparatu systemowego.');
   }
 }
 function stopCamera() {
@@ -111,7 +131,7 @@ async function flipCamera() {
 }
 function captureImage() {
   const video = $('#cameraVideo');
-  if (!video.videoWidth) return toast('Aparat nie jest gotowy.');
+  if (!stream || !video.videoWidth || video.readyState < 2) return toast('Aparat jeszcze się uruchamia — spróbuj za chwilę.');
   const canvas = $('#captureCanvas');
   const max = 1800, ratio = Math.min(1, max / video.videoWidth);
   canvas.width = Math.round(video.videoWidth * ratio); canvas.height = Math.round(video.videoHeight * ratio);
