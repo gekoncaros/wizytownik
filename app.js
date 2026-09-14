@@ -305,9 +305,9 @@ $('#imagePicker').addEventListener('change', e => loadFile(e.target.files[0]));
 $('#contactForm').addEventListener('submit', submitContact);
 $('#adminButton').addEventListener('click', event => { event.stopPropagation(); openAdmin(); });
 $('#emailSettingsForm').addEventListener('submit', saveEmailSettings);
-$('[data-mode]').forEach(button => button.addEventListener('click', () => {
+$$('[data-mode]').forEach(button => button.addEventListener('click', () => {
   scanMode = button.dataset.mode;
-  $('[data-mode]').forEach(b => b.classList.toggle('active', b === button));
+  $$('[data-mode]').forEach(b => b.classList.toggle('active', b === button));
   $('#cameraHelp').textContent = scanMode === 'qr' ? 'Ustaw kod QR w ramce' : 'Ustaw wizytówkę w ramce';
 }));
 $('#searchInput').addEventListener('input', renderLibrary);
