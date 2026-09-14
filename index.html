@@ -15,7 +15,7 @@
   <div class="app-shell">
     <header class="topbar">
       <div class="brand"><span class="brand-mark">W</span><span>Wizytownik</span></div>
-      <div class="top-actions"><button id="adminButton" class="icon-button" type="button" data-action="admin" aria-label="Ustawienia administratora" onclick="document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active')});document.getElementById('adminView').classList.add('active');window.scrollTo(0,0)">⚙</button><button id="installButton" class="icon-button hidden" aria-label="Zainstaluj aplikację">↓</button></div>
+      <div class="top-actions"><button id="adminButton" class="icon-button" type="button" data-action="admin" aria-label="Ustawienia administratora" onclick="if(window.wizytownikShowView){window.wizytownikShowView('admin')}else{document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');v.style.display='none'});var panel=document.getElementById('adminView');panel.classList.add('active');panel.style.display='block';window.scrollTo(0,0)}">⚙</button><button id="installButton" class="icon-button hidden" aria-label="Zainstaluj aplikację">↓</button></div>
     </header>
 
     <main>
