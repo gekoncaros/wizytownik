@@ -3,113 +3,73 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#183d39">
-  <meta name="description" content="Skanuj wizytówki i zapisuj kontakty szybko podczas eventów.">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#1d5a52">
   <title>Wizytownik</title>
+  <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <div class="brand"><span class="brand-mark">W</span><span>Wizytownik</span></div>
-      <div class="top-actions"><button id="adminButton" class="icon-button" type="button" data-action="admin" aria-label="Ustawienia administratora" onclick="if(window.wizytownikShowView){window.wizytownikShowView('admin')}else{document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');v.style.display='none'});var panel=document.getElementById('adminView');panel.classList.add('active');panel.style.display='block';window.scrollTo(0,0)}">⚙</button><button id="installButton" class="icon-button hidden" aria-label="Zainstaluj aplikację">↓</button></div>
-    </header>
+  <header class="topbar"><div class="brand"><b>W</b> Wizytownik</div><button id="btnAdmin" class="icon" type="button" aria-label="Administrator">⚙</button></header>
+  <main>
+    <section id="screenHome" class="screen">
+      <div class="hero"><small>EVENT CRM</small><h1>Wizytówki bez<br><i>przepisywania.</i></h1><p>Skanuj kontakty, popraw dane i zarządzaj leadami w jednym miejscu.</p><button id="btnStartScan" class="primary" type="button">Skanuj wizytówkę</button></div>
+      <div class="heading"><h2>Ostatnie skany</h2><button id="btnOpenCrm" class="link" type="button">Otwórz CRM</button></div>
+      <div id="recentList" class="list"></div>
+    </section>
 
-    <main>
-      <section id="homeView" class="view active">
-        <div class="hero">
-          <p class="eyebrow">EVENT TOOL</p>
-          <h1>Kontakty z wizytówek.<br><em>Bez przepisywania.</em></h1>
-          <p class="lede">Zrób zdjęcie, sprawdź dane i przejdź do kolejnego rozmówcy.</p>
-          <button class="primary large" data-action="start-scan">Skanuj wizytówkę <span>›</span></button>
-        </div>
-        <section class="section">
-          <div class="section-heading"><h2>Ostatnie skany</h2><button class="text-button crm-link" data-action="library">Otwórz CRM →</button></div>
-          <div id="recentList" class="contact-list empty-state">Brak zapisanych wizytówek</div>
-        </section>
-        <section class="privacy-note"><span>✓</span> Zdjęcia i dane są przechowywane lokalnie na tym urządzeniu.</section>
-      </section>
+    <section id="screenScan" class="screen hidden">
+      <div class="pagehead"><button class="back" data-go="home" type="button">‹</button><div><small>NOWY KONTAKT</small><h2>Skanowanie</h2></div></div>
+      <div class="modebar"><button id="modeCard" class="mode selected" type="button">Wizytówka + OCR</button><button id="modeQr" class="mode" type="button">Kod QR</button></div>
+      <div id="cameraBox" class="camera"><video id="video" autoplay playsinline muted></video><div class="frame"></div><p id="cameraMessage">Uruchamianie aparatu…</p></div>
+      <div id="cameraHelp" class="notice hidden"></div>
+      <div class="cameraActions"><button id="btnFlip" class="secondary" type="button">Zmień aparat</button><button id="btnCapture" class="capture" type="button" aria-label="Zrób zdjęcie">●</button><label class="secondary">Zdjęcie<input id="fileInput" type="file" accept="image/*" capture="environment" hidden></label></div>
+      <div id="scanStatus" class="notice hidden"></div>
+      <div id="scanPreview" class="preview hidden"></div>
+    </section>
 
-      <section id="scanView" class="view">
-        <div class="view-header"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">NOWY KONTAKT</p><h2>Skanowanie wizytówki</h2></div></div>
-        <div class="scan-mode"><button id="cardModeButton" class="mode-button active" data-mode="card">Wizytówka + OCR</button><button id="qrModeButton" class="mode-button" data-mode="qr">Skanuj QR</button></div>
-        <div id="cameraStage" class="camera-stage">
-          <video id="cameraVideo" autoplay playsinline muted></video>
-          <canvas id="captureCanvas" hidden></canvas>
-          <div class="camera-overlay"><div class="scan-frame"></div><p id="cameraHelp">Ustaw przód wizytówki w ramce</p></div>
-        </div>
-        <div id="cameraFallback" class="camera-fallback hidden">
-          <p>Aparat nie jest jeszcze aktywny.</p>
-          <button class="primary" data-action="camera">Włącz aparat</button>
-          <label class="secondary file-button">Wybierz zdjęcie<input id="imagePicker" type="file" accept="image/*" capture="environment" hidden></label>
-        </div>
-        <div class="scan-actions">
-          <button class="secondary" data-action="flip-camera">↺ Zmień aparat</button>
-          <button id="captureButton" class="capture-button" aria-label="Zrób zdjęcie"><span></span></button>
-          <button class="secondary" data-action="pick-image">Zdjęcie</button>
-        </div>
-        <div id="scanProgress" class="scan-progress hidden"><span class="spinner"></span><span>Odczytywanie wizytówki…</span></div>
-        <div id="scanPreview" class="scan-preview hidden"></div>
-      </section>
+    <section id="screenEdit" class="screen hidden">
+      <div class="pagehead"><button class="back" data-go="crm" type="button">‹</button><div><small>WERYFIKACJA</small><h2 id="editTitle">Dane kontaktu</h2></div></div>
+      <div id="photos" class="photos"></div>
+      <form id="contactForm">
+        <label>Imię i nazwisko<input name="name" autocomplete="name"></label>
+        <label>Firma<input name="company" autocomplete="organization"></label>
+        <label>Stanowisko<input name="jobTitle"></label>
+        <label>Wydarzenie / źródło<input name="event"></label>
+        <label>E-mail<input name="email" type="email" autocomplete="email"></label>
+        <label>Telefon<input name="phone" type="tel" autocomplete="tel"></label>
+        <label>Strona WWW<input name="website"></label>
+        <label>Adres<textarea name="address" rows="2"></textarea></label>
+        <label>Tagi<input name="tags" placeholder="np. targi, lead"></label>
+        <label>Notatka<textarea name="notes" rows="3"></textarea></label>
+        <details><summary>Tekst odczytany przez OCR / QR</summary><textarea name="rawText" rows="6"></textarea></details>
+        <button class="primary" type="submit">Zapisz kontakt</button>
+        <button id="btnThanks" class="secondary hidden" type="button">Wyślij podziękowanie e-mail</button>
+        <button id="btnDelete" class="danger hidden" type="button">Usuń kontakt</button>
+      </form>
+    </section>
 
-      <section id="editorView" class="view">
-        <div class="view-header"><button class="back-button" data-action="discard">‹</button><div><p class="eyebrow">SPRAWDŹ DANE</p><h2 id="editorTitle">Nowy kontakt</h2></div></div>
-        <div id="sideImages" class="side-images"></div>
-        <form id="contactForm" autocomplete="on">
-          <label>Imię i nazwisko<input name="name" placeholder="np. Anna Kowalska"></label>
-          <label>Firma<input name="company" placeholder="np. Firma Sp. z o.o."></label>
-          <label>Wydarzenie / źródło kontaktu<input name="event" placeholder="np. Targi Warsaw Industry Week"></label>
-          <label>Stanowisko<input name="jobTitle" placeholder="np. Dyrektor sprzedaży"></label>
-          <div class="two-cols">
-            <label>E-mail<input name="email" type="email" placeholder="kontakt@firma.pl"></label>
-            <label>Telefon<input name="phone" type="tel" placeholder="+48 000 000 000"></label>
-          </div>
-          <label>Strona WWW<input name="website" type="url" placeholder="www.firma.pl"></label>
-          <label>Adres<textarea name="address" rows="2" placeholder="Ulica, kod, miasto"></textarea></label>
-          <label>Tagi <span class="field-hint">oddziel przecinkami</span><input name="tags" placeholder="np. targi, lead, priorytet"></label>
-          <label>Notatka po rozmowie<textarea name="notes" rows="3" placeholder="O czym rozmawialiście?"></textarea></label>
-          <details class="ocr-details"><summary>Tekst odczytany z wizytówki</summary><textarea name="rawText" rows="6"></textarea></details>
-          <div class="editor-actions"><button id="deleteButton" class="danger hidden" type="button" data-action="delete-current">Usuń kontakt</button><button class="primary large" type="submit">Zapisz zmiany <span>✓</span></button></div>
-          <button id="thanksButton" class="email-button hidden" type="button" data-action="send-thanks">✉ Wyślij podziękowanie za rozmowę</button></div>
-        </form>
-      </section>
+    <section id="screenCrm" class="screen hidden">
+      <div class="pagehead"><button class="back" data-go="home" type="button">‹</button><div><small>BAZA KONTAKTÓW</small><h2>CRM — wizytówki</h2></div></div>
+      <input id="search" class="search" type="search" placeholder="Szukaj osoby, firmy, tagu…">
+      <div class="toolbar"><span id="count">0 kontaktów</span><span><button id="btnCsv" class="link" type="button">Eksport CSV</button><button id="btnJson" class="link" type="button">Backup JSON</button></span></div>
+      <div id="crmList" class="list"></div>
+    </section>
 
-
-
-      <section id="adminView" class="view">
-        <div class="view-header"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">ADMINISTRATOR</p><h2>Podziękowania e-mail</h2></div></div>
-        <div class="settings-note">Konfiguracja jest zapisywana na tym urządzeniu. Wysłanie otwiera gotową wiadomość w domyślnej aplikacji pocztowej.</div>
-        <form id="emailSettingsForm">
-          <label>Nazwa nadawcy<input name="senderName" placeholder="np. Anna z Cortiq"></label>
-          <label>Adres do odpowiedzi<input name="replyTo" type="email" placeholder="np. kontakt@firma.pl"></label>
-          <label>Domyślny temat<input name="subject" placeholder="Dziękuję za rozmowę"></label>
-          <label>Szablon wiadomości <span class="field-hint">zmienne: {{name}}, {{company}}, {{event}}, {{sender}}</span><textarea name="template" rows="9"></textarea></label>
-          <button class="primary large" type="submit">Zapisz konfigurację <span>✓</span></button>
-        </form>
-        <div class="settings-note">Automatyczna wysyłka z firmowej skrzynki będzie wymagała bezpiecznej konfiguracji serwera (SMTP/API) po wdrożeniu na Cyberfolks.</div>
-      </section>
-
-      <section id="libraryView" class="view">
-        <div class="view-header"><button class="back-button" data-action="home">‹</button><div><p class="eyebrow">BAZA KONTAKTÓW</p><h2>CRM — wizytówki</h2></div></div>
-        <div class="search-row"><input id="searchInput" type="search" placeholder="Szukaj osoby, firmy, tagu…"><button id="filterButton" class="icon-button">⌕</button></div>
-        <div class="library-tools"><span id="contactCount">0 kontaktów</span><div><button class="text-button" data-action="export-csv">Eksport CSV</button><button class="text-button" data-action="export-json">Backup JSON</button></div></div>
-        <p class="crm-tip">Kliknij kontakt, aby zobaczyć pełne dane i poprawić odczyt OCR.</p>
-        <div id="libraryList" class="contact-list empty-state">Tu pojawią się zeskanowane wizytówki.</div>
-      </section>
-    </main>
-
-    <nav class="bottom-nav">
-      <button class="nav-item active" data-action="home"><span>⌂</span>Start</button>
-      <button class="nav-scan" data-action="start-scan" aria-label="Skanuj">＋</button>
-      <button class="nav-item" data-action="library"><span>▤</span>CRM</button>
-    </nav>
-  </div>
-  <div id="toast" class="toast"></div>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-  <script src="app.js?v=11"></script>
+    <section id="screenAdmin" class="screen hidden">
+      <div class="pagehead"><button class="back" data-go="home" type="button">‹</button><div><small>ADMINISTRATOR</small><h2>Podziękowania e-mail</h2></div></div>
+      <p class="notice">Wiadomość zostanie otwarta w domyślnej aplikacji pocztowej telefonu. Dane SMTP nie są przechowywane w przeglądarce.</p>
+      <form id="settingsForm">
+        <label>Nazwa nadawcy<input name="senderName" placeholder="np. Anna z Cortiq"></label>
+        <label>Adres do odpowiedzi<input name="replyTo" type="email"></label>
+        <label>Temat<input name="subject"></label>
+        <label>Szablon <small>zmienne: {{name}}, {{company}}, {{event}}, {{sender}}</small><textarea name="template" rows="9"></textarea></label>
+        <button class="primary" type="submit">Zapisz konfigurację</button>
+      </form>
+    </section>
+  </main>
+  <nav><button id="navHome" type="button">⌂<span>Start</span></button><button id="navScan" class="plus" type="button">＋</button><button id="navCrm" type="button">▤<span>CRM</span></button></nav>
+  <canvas id="canvas" hidden></canvas><div id="toast"></div>
+  <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script defer src="app.js?v=12"></script>
 </body>
 </html>
