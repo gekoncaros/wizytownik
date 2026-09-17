@@ -4,6 +4,7 @@
   const DB = 'wizytownik-v12', STORE = 'contacts';
   let database, mediaStream, facing = 'environment', mode = 'card';
   let draft = {};
+  let dbReady = false;
 
   const fields = ['name','company','jobTitle','event','email','phone','website','address','tags','notes','rawText'];
   const screens = ['home','scan','edit','crm','admin'];
@@ -15,15 +16,15 @@
   function go(name) {
     screens.forEach(key => $('screen' + key[0].toUpperCase() + key.slice(1)).classList.toggle('hidden', key !== name));
     if (name !== 'scan') stopCamera();
-    if (name === 'home') renderRecent();
-    if (name === 'crm') renderCrm();
+    if (name === 'home' && dbReady) renderRecent();
+    if (name === 'crm' && dbReady) renderCrm();
     window.scrollTo(0, 0);
   }
   function openDatabase() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB, 1);
       request.onupgradeneeded = () => request.result.createObjectStore(STORE, { keyPath: 'id' });
-      request.onsuccess = () => { database = request.result; resolve(); };
+      request.onsuccess = () => { database = request.result; dbReady = true; resolve(); };
       request.onerror = () => reject(request.error);
     });
   }
@@ -72,13 +73,16 @@
   async function renderCrm() {
     const term = $('search').value.trim().toLowerCase();
     const contacts = await allContacts();
-    const result = contacts.filter(contact => Object.values(contact).join(' ').toLowerCase().includes(term));
+    const searchable = contact => fields.map(key => contact[key] || '').join(' ').toLowerCase();
+    const result = term ? contacts.filter(contact => searchable(contact).includes(term)) : contacts;
     $('count').textContent = result.length + (result.length === 1 ? ' kontakt' : result.length < 5 ? ' kontakty' : ' kontaktów');
     $('crmList').innerHTML = result.length ? result.map(card).join('') : '<p class="empty">Brak kontaktów do wyświetlenia.</p>';
     bindCards();
   }
 
   async function startCamera() {
+    draft = {};
+    $('fileInput').value = '';
     go('scan');
     $('cameraHelp').classList.add('hidden');
     $('scanPreview').classList.add('hidden');
@@ -132,6 +136,7 @@
   }
   function parseQr(text) {
     const result = {};
+    text = String(text || '').replace(/\r\n?/g, '\n').replace(/\n[ \t]/g, '');
     if (/BEGIN:VCARD/i.test(text)) {
       const get = key => ((text.match(new RegExp('(?:^|\\n)' + key + '(?:;[^:]*)?:(.+)', 'i')) || ['', ''])[1]).trim();
       result.name = get('FN'); result.company = get('ORG'); result.jobTitle = get('TITLE');
@@ -240,7 +245,10 @@
       }).join('\r\n');
       blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' }); name = 'wizytownik-kontakty.vcf';
     } else { blob = new Blob([JSON.stringify(contacts, null, 2)], { type: 'application/json' }); name = 'wizytownik-backup.json'; }
-    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = name; link.click(); URL.revokeObjectURL(link.href);
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
   }
 
   $('btnStartScan').addEventListener('click', startCamera);
@@ -264,5 +272,6 @@
   $('btnCsv').addEventListener('click', () => download('csv'));
   $('btnJson').addEventListener('click', () => download('json'));
 
-  openDatabase().then(() => go('home')).catch(() => { toast('Nie można otworzyć lokalnej bazy.'); go('home'); });
+  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+  openDatabase().then(() => go('home')).catch(() => { toast('Nie można otworzyć lokalnej bazy. Tryb CRM jest niedostępny.'); });
 })();
