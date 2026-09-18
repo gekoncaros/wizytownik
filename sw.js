@@ -1,5 +1,5 @@
-const CACHE = 'wizytownik-v14';
-const CORE = ['./', './index.html', './style.css?v=14', './app.js?v=14', './manifest.webmanifest', './icon.svg'];
+const CACHE = 'wizytownik-v15';
+const CORE = ['./', './index.html', './style.css?v=15', './scan-utils.js?v=15', './app.js?v=15', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));

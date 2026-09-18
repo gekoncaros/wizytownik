@@ -13,7 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: JavaScript syntax
-        run: node --check app.js
+        run: |
+          node --check app.js
+          node --check scan-utils.js
+      - name: Scan data parser tests
+        run: node tests/scan-utils.test.js
       - name: Required PWA files
         run: |
           test -s index.html
@@ -21,3 +25,4 @@ jobs:
           test -s sw.js
           grep -q 'rel="manifest"' index.html
           grep -q "serviceWorker.register" app.js
+          grep -q 'scan-utils.js' index.html

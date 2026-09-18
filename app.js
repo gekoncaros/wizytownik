@@ -5,6 +5,8 @@
   let database, mediaStream, facing = 'environment', mode = 'card';
   let draft = {};
   let dbReady = false;
+  let liveQrFrame = 0, liveQrBusy = false, liveQrLastAt = 0, scanSequence = 0, imageProcessing = false;
+  const scanUtils = window.WizytownikScanUtils;
 
   const fields = ['name','company','jobTitle','event','email','phone','website','address','tags','notes','rawText'];
   const screens = ['home','scan','edit','crm','admin'];
@@ -80,9 +82,13 @@
     bindCards();
   }
 
-  async function startCamera() {
-    draft = {};
-    $('fileInput').value = '';
+  async function startCamera(resetDraft = true) {
+    if (mediaStream) stopCamera();
+    if (resetDraft) {
+      scanSequence += 1;
+      draft = {};
+      $('fileInput').value = '';
+    }
     go('scan');
     $('cameraHelp').classList.add('hidden');
     $('scanPreview').classList.add('hidden');
@@ -93,6 +99,7 @@
       const video = $('video'); video.srcObject = mediaStream;
       await video.play();
       $('cameraMessage').textContent = mode === 'qr' ? 'Ustaw kod QR w ramce' : 'Ustaw wizytówkę w ramce';
+      if (mode === 'qr') startLiveQrScan();
     } catch (error) {
       $('cameraHelp').textContent = 'Aparat jest niedostępny. Użyj przycisku „Zdjęcie” — otworzy aparat telefonu.';
       $('cameraHelp').classList.remove('hidden');
@@ -100,12 +107,14 @@
     }
   }
   function stopCamera() {
+    if (liveQrFrame) cancelAnimationFrame(liveQrFrame);
+    liveQrFrame = 0; liveQrBusy = false;
     if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
     mediaStream = null;
   }
   async function flipCamera() {
     facing = facing === 'environment' ? 'user' : 'environment';
-    stopCamera(); await startCamera();
+    stopCamera(); await startCamera(false);
   }
   function capture() {
     const video = $('video');
@@ -118,67 +127,156 @@
   }
   function loadImage(file) {
     if (!file) return;
+    if (file.type && !file.type.startsWith('image/')) return toast('Wybierz plik graficzny wizytówki.');
+    if (file.size > 15 * 1024 * 1024) return toast('Zdjęcie jest zbyt duże. Wybierz plik do 15 MB.');
     const reader = new FileReader();
     reader.onload = () => processImage(reader.result);
     reader.readAsDataURL(file);
   }
+  async function imageToCanvas(data, maxSide = 1800) {
+    const image = new Image();
+    await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; image.src = data; });
+    const ratio = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round((image.naturalWidth || image.width) * ratio));
+    canvas.height = Math.max(1, Math.round((image.naturalHeight || image.height) * ratio));
+    canvas.getContext('2d', { alpha: false }).drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas;
+  }
+  function enhanceCanvas(source) {
+    const canvas = document.createElement('canvas');
+    canvas.width = source.width; canvas.height = source.height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    context.drawImage(source, 0, 0);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+    for (let index = 0; index < pixels.data.length; index += 4) {
+      const gray = Math.round(pixels.data[index] * .299 + pixels.data[index + 1] * .587 + pixels.data[index + 2] * .114);
+      const contrast = gray < 148 ? Math.max(0, gray - 38) : Math.min(255, (gray - 148) * 1.65 + 148);
+      pixels.data[index] = pixels.data[index + 1] = pixels.data[index + 2] = contrast;
+    }
+    context.putImageData(pixels, 0, 0);
+    return canvas;
+  }
+  function cropCanvas(source, left, top, width, height) {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.min(1200, source.width); canvas.height = Math.round(canvas.width * height / width);
+    canvas.getContext('2d', { alpha: false }).drawImage(source, left, top, width, height, 0, 0, canvas.width, canvas.height);
+    return canvas;
+  }
+  function decodeQrCanvas(canvas) {
+    if (!window.jsQR || !canvas.width || !canvas.height) return '';
+    const read = candidate => {
+      try {
+        const context = candidate.getContext('2d', { willReadFrequently: true });
+        const image = context.getImageData(0, 0, candidate.width, candidate.height);
+        const result = window.jsQR(image.data, candidate.width, candidate.height, { inversionAttempts: 'attemptBoth' });
+        return result ? result.data : '';
+      } catch (error) { return ''; }
+    };
+    let result = read(canvas) || read(enhanceCanvas(canvas));
+    if (result) return result;
+    const width = Math.round(canvas.width * .62), height = Math.round(canvas.height * .62);
+    const positions = [[0, 0], [canvas.width - width, 0], [0, canvas.height - height], [canvas.width - width, canvas.height - height], [Math.round((canvas.width - width) / 2), Math.round((canvas.height - height) / 2)]];
+    for (const [left, top] of positions) {
+      result = read(cropCanvas(canvas, left, top, width, height));
+      if (result) return result;
+    }
+    return '';
+  }
   async function decodeQr(data) {
     try {
-      const image = new Image();
-      await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; image.src = data; });
-      const canvas = document.createElement('canvas');
-      canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      context.drawImage(image, 0, 0);
-      const result = window.jsQR && window.jsQR(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, { inversionAttempts: 'attemptBoth' });
-      return result ? result.data : '';
+      return decodeQrCanvas(await imageToCanvas(data));
     } catch (error) { return ''; }
   }
-  function parseQr(text) {
-    const result = {};
-    text = String(text || '').replace(/\r\n?/g, '\n').replace(/\n[ \t]/g, '');
-    if (/BEGIN:VCARD/i.test(text)) {
-      const get = key => ((text.match(new RegExp('(?:^|\\n)' + key + '(?:;[^:]*)?:(.+)', 'i')) || ['', ''])[1]).trim();
-      result.name = get('FN'); result.company = get('ORG'); result.jobTitle = get('TITLE');
-      result.email = get('EMAIL'); result.phone = get('TEL'); result.website = get('URL');
-      result.address = get('ADR').replace(/;/g, ', '); result.notes = 'Dane odczytane z QR.';
-    } else if (/^mailto:/i.test(text)) result.email = text.replace(/^mailto:/i, '');
-    else if (/^https?:\/\//i.test(text) || /^www\./i.test(text)) result.website = text;
-    return result;
+  async function optimiseImage(data) {
+    const canvas = await imageToCanvas(data, 1800);
+    return canvas.toDataURL('image/jpeg', .86);
   }
-  function parseText(text) {
-    const lines = text.replace(/\r/g, '').split('\n').map(line => line.trim()).filter(Boolean);
-    const email = (text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i) || [''])[0];
-    const phone = (text.match(/(?:\+?\d[\d\s().-]{7,}\d)/) || [''])[0];
-    const website = (text.match(/(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+\.[a-z]{2,}/i) || [''])[0];
-    const name = lines.find(line => /^[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+/.test(line)) || '';
-    return { name, company: lines.find(line => line !== name && !line.includes('@')) || '', email, phone, website };
+  function setScanStatus(message) {
+    $('scanStatus').textContent = message;
+    $('scanStatus').classList.remove('hidden');
+  }
+  function startLiveQrScan() {
+    if (mode !== 'qr' || !mediaStream || liveQrFrame) return;
+    const video = $('video');
+    const loop = () => {
+      liveQrFrame = requestAnimationFrame(loop);
+      if (liveQrBusy || !video.videoWidth || mode !== 'qr' || performance.now() - liveQrLastAt < 250) return;
+      liveQrBusy = true;
+      liveQrLastAt = performance.now();
+      const canvas = document.createElement('canvas');
+      const ratio = Math.min(1, 900 / video.videoWidth);
+      canvas.width = Math.round(video.videoWidth * ratio); canvas.height = Math.round(video.videoHeight * ratio);
+      canvas.getContext('2d', { alpha: false }).drawImage(video, 0, 0, canvas.width, canvas.height);
+      const text = decodeQrCanvas(canvas);
+      liveQrBusy = false;
+      if (text) {
+        draft.qrText = text;
+        stopCamera();
+        toast('Kod QR odczytany');
+        openEdit(Object.assign({}, scanUtils.parseQr(text), draft, { rawText: text }));
+      }
+    };
+    liveQrFrame = requestAnimationFrame(loop);
+  }
+  function setMode(nextMode) {
+    mode = nextMode;
+    $('modeCard').classList.toggle('selected', mode === 'card');
+    $('modeQr').classList.toggle('selected', mode === 'qr');
+    if (mediaStream) {
+      $('cameraMessage').textContent = mode === 'qr' ? 'Skaner QR działa automatycznie' : 'Ustaw wizytówkę w ramce';
+      if (mode === 'qr') startLiveQrScan(); else if (liveQrFrame) { cancelAnimationFrame(liveQrFrame); liveQrFrame = 0; }
+    }
   }
   async function processImage(data) {
+    if (imageProcessing) return toast('Poczekaj na przetworzenie zdjęcia.');
+    imageProcessing = true;
+    const sequence = scanSequence;
+    setScanStatus('Przygotowywanie zdjęcia…');
+    let picture = data;
+    try { picture = await optimiseImage(data); } catch (error) { /* original image remains usable */ }
+    if (sequence !== scanSequence) { imageProcessing = false; return; }
     const side = draft.frontImage ? 'backImage' : 'frontImage';
-    draft[side] = data;
-    const qr = await decodeQr(data);
+    draft[side] = picture;
+    setScanStatus('Szukanie kodu QR…');
+    const qr = await decodeQr(picture);
+    if (sequence !== scanSequence) { imageProcessing = false; return; }
     if (qr) draft.qrText = qr;
-    $('scanPreview').innerHTML = '<img src="' + data + '" alt="Zdjęcie"><div><strong>' + (qr ? 'Wykryto kod QR' : side === 'frontImage' ? 'Zapisano przód' : 'Zapisano tył') + '</strong><br><button id="btnRead" class="link" type="button">Odczytaj i uzupełnij dane</button></div>';
+    $('scanStatus').classList.add('hidden');
+    const message = qr ? 'Wykryto kod QR — dane uzupełnią się pierwsze.' : mode === 'qr' ? 'Nie znaleziono kodu QR. Spróbuj ponownie, zbliż kod lub użyj lepszego światła.' : side === 'frontImage' ? 'Zapisano przód wizytówki' : 'Zapisano tył wizytówki';
+    $('scanPreview').innerHTML = '<img src="' + picture + '" alt="Zdjęcie"><div><strong>' + message + '</strong><br><button id="btnRead" class="link" type="button">Odczytaj i uzupełnij dane</button></div>';
     $('scanPreview').classList.remove('hidden');
     $('btnRead').addEventListener('click', readData);
-    if (mode === 'qr' && qr) openEdit(Object.assign({}, parseQr(qr), draft, { rawText: qr }));
+    imageProcessing = false;
+    if (mode === 'qr' && qr) openEdit(Object.assign({}, scanUtils.parseQr(qr), draft, { rawText: qr }));
   }
   async function readData() {
     const pictures = [draft.frontImage, draft.backImage].filter(Boolean);
     if (!pictures.length) return;
-    $('scanStatus').textContent = 'Odczytywanie danych…';
-    $('scanStatus').classList.remove('hidden');
+    setScanStatus('Odczytywanie danych z wizytówki…');
+    const readButton = $('btnRead');
+    if (readButton) readButton.disabled = true;
     let text = draft.qrText || '';
     try {
       if (!window.Tesseract) throw new Error('OCR niedostępny');
-      for (const picture of pictures) {
-        const result = await window.Tesseract.recognize(picture, 'pol+eng');
-        text += '\n' + result.data.text;
+      for (let index = 0; index < pictures.length; index += 1) {
+        const update = event => {
+          if (event.status === 'recognizing text' && Number.isFinite(event.progress)) setScanStatus('OCR ' + (index + 1) + '/' + pictures.length + ': ' + Math.round(event.progress * 100) + '%');
+        };
+        const first = await window.Tesseract.recognize(pictures[index], 'pol+eng', { logger: update, tessedit_pageseg_mode: '6', preserve_interword_spaces: '1' });
+        let pageText = first.data.text || '';
+        if (!scanUtils.isUsefulOcr(pageText) || Object.keys(scanUtils.parseText(pageText)).length < 3) {
+          const enhanced = enhanceCanvas(await imageToCanvas(pictures[index], 1800)).toDataURL('image/jpeg', .92);
+          setScanStatus('Ponowny OCR w trybie wysokiego kontrastu…');
+          const retry = await window.Tesseract.recognize(enhanced, 'pol+eng', { logger: update, tessedit_pageseg_mode: '11', preserve_interword_spaces: '1' });
+          pageText = scanUtils.uniqueText(pageText, retry.data.text || '');
+        }
+        text = scanUtils.uniqueText(text, pageText);
       }
     } catch (error) { toast('OCR niedostępny — możesz wpisać dane ręcznie.'); }
     $('scanStatus').classList.add('hidden');
-    openEdit(Object.assign({}, parseText(text), parseQr(draft.qrText || ''), draft, { rawText: text.trim() }));
+    if (readButton) readButton.disabled = false;
+    openEdit(Object.assign({}, scanUtils.mergeContactData(scanUtils.parseText(text), scanUtils.parseQr(draft.qrText || '')), draft, { rawText: text.trim() }));
   }
 
   function openEdit(contact) {
@@ -261,8 +359,8 @@
   $('btnFlip').addEventListener('click', flipCamera);
   $('btnCapture').addEventListener('click', capture);
   $('fileInput').addEventListener('change', event => loadImage(event.target.files[0]));
-  $('modeCard').addEventListener('click', () => { mode = 'card'; $('modeCard').classList.add('selected'); $('modeQr').classList.remove('selected'); });
-  $('modeQr').addEventListener('click', () => { mode = 'qr'; $('modeQr').classList.add('selected'); $('modeCard').classList.remove('selected'); });
+  $('modeCard').addEventListener('click', () => setMode('card'));
+  $('modeQr').addEventListener('click', () => setMode('qr'));
   $('contactForm').addEventListener('submit', saveForm);
   $('btnDelete').addEventListener('click', removeCurrent);
   $('btnThanks').addEventListener('click', thankYou);

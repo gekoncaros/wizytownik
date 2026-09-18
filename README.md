@@ -5,8 +5,10 @@ Mobilna aplikacja PWA do szybkiego zbierania kontaktów z wizytówek podczas wyd
 ## Co potrafi
 
 - zdjęcie przodu i tyłu wizytówki aparatem telefonu;
-- OCR po polsku i angielsku, wykonywany w przeglądarce;
-- automatyczne wykrycie e-maili, telefonów i stron WWW;
+- OCR po polsku i angielsku, wykonywany w przeglądarce, z automatyczną próbą wysokiego kontrastu przy słabym odczycie;
+- automatyczne wykrycie e-maili, telefonów, stron WWW, stanowiska, firmy i adresu;
+- automatyczne skanowanie QR z podglądu aparatu oraz wieloprzebiegowe wykrywanie QR na zdjęciu wizytówki (pełny kadr, kontrast i przybliżone obszary);
+- odczyt danych z QR w formatach vCard, MeCard, BizCard, URL oraz mailto;
 - prosta korekta danych przed zapisem;
 - lista ostatnich skanów, wyszukiwanie, tagi, notatki i edycja;
 - eksport danych do CSV lub JSON;
@@ -32,3 +34,7 @@ W wersji startowej dane nie trafiają na serwer aplikacji. Silnik OCR jest pobie
 ## Następny etap
 
 Wersja zespołowa może zawierać konta użytkowników, wspólną bazę, przypisanie kontaktu do eventu/opiekuna, zgodę marketingową, synchronizację z CRM oraz eksport do Excel/HubSpot/Bitrix.
+
+## Kontrola jakości
+
+Przed zmianą uruchom `node tests/scan-utils.test.js`. Test obejmuje formaty QR i typowe dane OCR, w tym polskie znaki, odstępy rozpoznane przy adresie e-mail oraz dane vCard. Dane po OCR i QR zawsze należy zatwierdzić na ekranie korekty przed zapisem.
